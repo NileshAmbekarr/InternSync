@@ -1,0 +1,136 @@
+/* Review Report Styles - Carbon Black Theme */
+
+.review-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: var(--spacing-xl);
+}
+
+@media (max-width: 1024px) {
+    .review-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.review-main .card {
+    padding: var(--spacing-xl);
+}
+
+.review-title {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.review-meta {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: var(--spacing-xs) 0 0 0;
+}
+
+/* Intern Section */
+.intern-section,
+.summary-section,
+.attachment-section {
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-xl);
+    border-top: 1px solid var(--border-color);
+}
+
+.intern-section h4,
+.summary-section h4,
+.attachment-section h4 {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.intern-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* Summary Section */
+.summary-content {
+    background: var(--bg-elevated);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    color: var(--text-secondary);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Attachment Section */
+.attachment-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md);
+    background: var(--bg-elevated);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.attachment-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.attachment-icon {
+    font-size: 1.5rem;
+}
+
+.attachment-name {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Grading Card */
+.grading-card {
+    position: sticky;
+    top: 90px;
+}
+
+.grading-card h3 {
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.2rem;
+}
+
+.grading-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.grading-submit {
+    width: 100%;
+    margin-top: var(--spacing-sm);
+}
+
+.grading-info {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: var(--spacing-sm) 0 0 0;
+}
