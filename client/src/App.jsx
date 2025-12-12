@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import OAuthCallback from './pages/OAuthCallback';
 import VerifyEmail from './pages/VerifyEmail';
+import AcceptInvite from './pages/AcceptInvite';
+import Onboarding from './pages/Onboarding';
 import InternDashboard from './pages/InternDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ReviewReport from './pages/ReviewReport';
@@ -16,7 +18,8 @@ const PublicRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
 
   if (isAuthenticated) {
-    return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+    const path = user?.role === 'intern' ? '/dashboard' : '/admin';
+    return <Navigate to={path} replace />;
   }
 
   return children;
@@ -46,9 +49,20 @@ function App() {
             }
           />
 
-          {/* OAuth and Email Verification */}
+          {/* Auth Flows */}
           <Route path="/oauth-callback" element={<OAuthCallback />} />
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
+          <Route path="/accept-invite/:token" element={<AcceptInvite />} />
+
+          {/* Onboarding (Owner only) */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute allowedRoles={['owner']}>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Intern Routes */}
           <Route
@@ -68,11 +82,11 @@ function App() {
             }
           />
 
-          {/* Admin Routes */}
+          {/* Admin/Owner Routes */}
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'owner']}>
                 <AdminDashboard />
               </ProtectedRoute>
             }
@@ -80,7 +94,7 @@ function App() {
           <Route
             path="/admin/reports"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'owner']}>
                 <AdminDashboard />
               </ProtectedRoute>
             }
@@ -88,7 +102,7 @@ function App() {
           <Route
             path="/admin/review/:id"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'owner']}>
                 <ReviewReport />
               </ProtectedRoute>
             }

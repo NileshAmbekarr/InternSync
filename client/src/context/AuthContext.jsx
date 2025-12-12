@@ -13,6 +13,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [organization, setOrganization] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -21,16 +22,18 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuth = async () => {
         const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
 
-        if (token && storedUser) {
+        if (token) {
             try {
                 const response = await authAPI.getMe();
                 setUser(response.data.user);
+                setOrganization(response.data.organization);
             } catch (error) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
+                localStorage.removeItem('organization');
                 setUser(null);
+                setOrganization(null);
             }
         }
         setLoading(false);
@@ -38,57 +41,67 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         const response = await authAPI.login({ email, password });
-        const { token, user } = response.data;
+        const { token, user, organization } = response.data;
 
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('organization', JSON.stringify(organization));
         setUser(user);
+        setOrganization(organization);
 
-        return user;
+        return { user, organization };
     };
 
     // Login with token (for OAuth callback)
     const loginWithToken = async (token) => {
         localStorage.setItem('token', token);
 
-        // Fetch user info with the new token
         const response = await authAPI.getMe();
-        const user = response.data.user;
+        const { user, organization } = response.data;
 
         localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('organization', JSON.stringify(organization));
         setUser(user);
+        setOrganization(organization);
 
         return user;
     };
 
     const register = async (userData) => {
         const response = await authAPI.register(userData);
-        const { token, user } = response.data;
+        const { token, user, organization } = response.data;
 
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('organization', JSON.stringify(organization));
         setUser(user);
+        setOrganization(organization);
 
-        return user;
+        return { user, organization };
     };
 
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('organization');
         setUser(null);
+        setOrganization(null);
     };
 
-    const isAdmin = () => user?.role === 'admin';
+    const isOwner = () => user?.role === 'owner';
+    const isAdmin = () => ['admin', 'owner'].includes(user?.role);
     const isIntern = () => user?.role === 'intern';
     const isEmailVerified = () => user?.isEmailVerified === true;
 
     const value = {
         user,
+        organization,
         loading,
         login,
         loginWithToken,
         register,
         logout,
+        isOwner,
         isAdmin,
         isIntern,
         isEmailVerified,

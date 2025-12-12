@@ -1,26 +1,29 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-    const { user, isAuthenticated, loading } = useAuth();
-    const location = useLocation();
+const ProtectedRoute = ({ children, allowedRoles }) => {
+    const { isAuthenticated, user, loading } = useAuth();
 
     if (loading) {
         return (
             <div className="loading-container">
                 <div className="spinner"></div>
-                <p>Loading...</p>
             </div>
         );
     }
 
     if (!isAuthenticated) {
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        return <Navigate to="/login" replace />;
     }
 
-    if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-        // Redirect to appropriate dashboard based on role
-        const redirectPath = user?.role === 'admin' ? '/admin' : '/dashboard';
+    // Owner has all admin permissions
+    const userRole = user?.role;
+    const hasAccess = allowedRoles.includes(userRole) ||
+        (userRole === 'owner' && allowedRoles.includes('admin'));
+
+    if (!hasAccess) {
+        // Redirect to appropriate dashboard
+        const redirectPath = userRole === 'intern' ? '/dashboard' : '/admin';
         return <Navigate to={redirectPath} replace />;
     }
 

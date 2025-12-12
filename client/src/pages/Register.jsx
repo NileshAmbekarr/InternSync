@@ -10,7 +10,7 @@ const Register = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        department: '',
+        organizationName: '',
     });
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
@@ -36,18 +36,22 @@ const Register = () => {
             return;
         }
 
+        if (!formData.organizationName.trim()) {
+            toast.error('Organization name is required');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const user = await register({
+            const result = await register({
                 name: formData.name,
                 email: formData.email,
                 password: formData.password,
-                role: 'intern', // Always intern - admins are predefined
-                department: formData.department,
+                organizationName: formData.organizationName,
             });
-            toast.success(`Welcome to InternSync, ${user.name}!`);
-            navigate('/dashboard');
+            toast.success(`Welcome to InternSync! Your organization "${result.organization.name}" is ready.`);
+            navigate('/onboarding');
         } catch (error) {
             toast.error(error.response?.data?.message || 'Registration failed');
         } finally {
@@ -56,7 +60,6 @@ const Register = () => {
     };
 
     const handleGoogleLogin = () => {
-        // Will be implemented with OAuth
         window.location.href = 'http://localhost:5000/api/auth/google';
     };
 
@@ -68,7 +71,7 @@ const Register = () => {
                         <span className="logo-icon">⚡</span>
                         <h1 className="logo-text">InternSync</h1>
                     </div>
-                    <p className="auth-subtitle">Create your intern account to get started.</p>
+                    <p className="auth-subtitle">Create your organization and get started.</p>
                 </div>
 
                 {/* Google Sign In */}
@@ -92,7 +95,20 @@ const Register = () => {
 
                 <form onSubmit={handleSubmit} className="auth-form">
                     <div className="form-group">
-                        <label className="form-label">Full Name</label>
+                        <label className="form-label">Organization Name</label>
+                        <input
+                            type="text"
+                            name="organizationName"
+                            className="form-input"
+                            placeholder="Your company or team name"
+                            value={formData.organizationName}
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Your Name</label>
                         <input
                             type="text"
                             name="name"
@@ -145,32 +161,23 @@ const Register = () => {
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <label className="form-label">Department (Optional)</label>
-                        <input
-                            type="text"
-                            name="department"
-                            className="form-input"
-                            placeholder="e.g., Engineering"
-                            value={formData.department}
-                            onChange={handleChange}
-                        />
-                    </div>
-
                     <button type="submit" className="btn btn-primary btn-lg auth-btn" disabled={loading}>
                         {loading ? (
                             <>
                                 <span className="spinner" style={{ width: 20, height: 20 }}></span>
-                                Creating Account...
+                                Creating Organization...
                             </>
                         ) : (
-                            'Create Account'
+                            'Create Organization'
                         )}
                     </button>
                 </form>
 
                 <p className="auth-footer">
                     Already have an account? <Link to="/login">Sign in</Link>
+                </p>
+                <p className="auth-footer" style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Were you invited? Check your email for an invite link.
                 </p>
             </div>
         </div>

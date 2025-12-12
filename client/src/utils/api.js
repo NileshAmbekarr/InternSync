@@ -30,6 +30,7 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            localStorage.removeItem('organization');
             window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -43,6 +44,8 @@ export const authAPI = {
     getMe: () => api.get('/auth/me'),
     verifyEmail: (token) => api.get(`/auth/verify-email/${token}`),
     resendVerification: () => api.post('/auth/resend-verification'),
+    invite: (data) => api.post('/auth/invite', data),
+    acceptInvite: (token, data) => api.post(`/auth/accept-invite/${token}`, data),
 };
 
 // Reports API
@@ -69,8 +72,11 @@ export const reportsAPI = {
 // Users API
 export const usersAPI = {
     getInterns: () => api.get('/users/interns'),
+    getTeam: () => api.get('/users/team'),
     getOne: (id) => api.get(`/users/${id}`),
     updateProfile: (data) => api.put('/users/profile', data),
+    deactivate: (id) => api.put(`/users/${id}/deactivate`),
+    reactivate: (id) => api.put(`/users/${id}/reactivate`),
 };
 
 export default api;
