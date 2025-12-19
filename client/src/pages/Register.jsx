@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PasswordInput from '../components/PasswordInput';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
@@ -12,32 +13,57 @@ const Register = () => {
         confirmPassword: '',
         organizationName: '',
     });
+    const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
+        const { name, value } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value,
+            [name]: value,
         });
+
+        // Clear error when user types
+        if (errors[name]) {
+            setErrors({ ...errors, [name]: '' });
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+
+        if (!formData.organizationName.trim()) {
+            newErrors.organizationName = 'Organization name is required';
+        }
+
+        if (!formData.name.trim()) {
+            newErrors.name = 'Name is required';
+        }
+
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email';
+        }
+
+        if (formData.password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            newErrors.confirmPassword = 'Passwords do not match';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (formData.password !== formData.confirmPassword) {
-            toast.error('Passwords do not match');
-            return;
-        }
-
-        if (formData.password.length < 6) {
-            toast.error('Password must be at least 6 characters');
-            return;
-        }
-
-        if (!formData.organizationName.trim()) {
-            toast.error('Organization name is required');
+        if (!validateForm()) {
             return;
         }
 
@@ -50,10 +76,23 @@ const Register = () => {
                 password: formData.password,
                 organizationName: formData.organizationName,
             });
-            toast.success(`Welcome to InternSync! Your organization "${result.organization.name}" is ready.`);
+            toast.success(`Welcome to InternSync! Your organization "${result.organization.name}" is ready.`, {
+                duration: 5000,
+                icon: '🎉'
+            });
             navigate('/onboarding');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Registration failed');
+            const message = error.response?.data?.message || 'Registration failed';
+
+            if (message.includes('already registered')) {
+                setErrors({ email: 'This email is already registered' });
+                toast.error('This email is already registered. Please login instead.');
+            } else if (message.includes('Organization name already taken')) {
+                setErrors({ organizationName: 'This organization name is taken' });
+                toast.error('Organization name is taken. Please choose another.');
+            } else {
+                toast.error(message);
+            }
         } finally {
             setLoading(false);
         }
@@ -99,12 +138,15 @@ const Register = () => {
                         <input
                             type="text"
                             name="organizationName"
-                            className="form-input"
+                            className={`form-input ${errors.organizationName ? 'error' : ''}`}
                             placeholder="Your company or team name"
                             value={formData.organizationName}
                             onChange={handleChange}
                             required
                         />
+                        {errors.organizationName && (
+                            <span className="form-error">{errors.organizationName}</span>
+                        )}
                     </div>
 
                     <div className="form-group">
@@ -112,12 +154,13 @@ const Register = () => {
                         <input
                             type="text"
                             name="name"
-                            className="form-input"
+                            className={`form-input ${errors.name ? 'error' : ''}`}
                             placeholder="Enter your full name"
                             value={formData.name}
                             onChange={handleChange}
                             required
                         />
+                        {errors.name && <span className="form-error">{errors.name}</span>}
                     </div>
 
                     <div className="form-group">
@@ -125,39 +168,41 @@ const Register = () => {
                         <input
                             type="email"
                             name="email"
-                            className="form-input"
+                            className={`form-input ${errors.email ? 'error' : ''}`}
                             placeholder="Enter your email"
                             value={formData.email}
                             onChange={handleChange}
                             required
                         />
+                        {errors.email && <span className="form-error">{errors.email}</span>}
                     </div>
 
                     <div className="form-row">
                         <div className="form-group">
                             <label className="form-label">Password</label>
-                            <input
-                                type="password"
+                            <PasswordInput
                                 name="password"
-                                className="form-input"
-                                placeholder="Create a password"
                                 value={formData.password}
                                 onChange={handleChange}
-                                required
+                                placeholder="Create a password"
+                                minLength={6}
+                                className={errors.password ? 'error' : ''}
                             />
+                            {errors.password && <span className="form-error">{errors.password}</span>}
                         </div>
 
                         <div className="form-group">
                             <label className="form-label">Confirm Password</label>
-                            <input
-                                type="password"
+                            <PasswordInput
                                 name="confirmPassword"
-                                className="form-input"
-                                placeholder="Confirm password"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
-                                required
+                                placeholder="Confirm password"
+                                className={errors.confirmPassword ? 'error' : ''}
                             />
+                            {errors.confirmPassword && (
+                                <span className="form-error">{errors.confirmPassword}</span>
+                            )}
                         </div>
                     </div>
 

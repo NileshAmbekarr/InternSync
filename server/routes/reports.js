@@ -1,11 +1,18 @@
 const express = require('express');
 const Report = require('../models/Report');
+const Organization = require('../models/Organization');
+const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
+const { attachOrganization, checkStorageLimit } = require('../middleware/organization');
 const upload = require('../middleware/upload');
 const path = require('path');
 const fs = require('fs');
 
 const router = express.Router();
+
+// Apply org middleware to all routes
+router.use(protect);
+router.use(attachOrganization);
 
 // ============================================
 // INTERN ROUTES
@@ -14,11 +21,12 @@ const router = express.Router();
 // @route   POST /api/reports
 // @desc    Create a new report (as draft or submitted)
 // @access  Private (Intern)
-router.post('/', protect, authorize('intern'), upload.single('file'), async (req, res) => {
+router.post('/', authorize('intern'), upload.single('file'), async (req, res) => {
     try {
         const { type, summary, submitNow } = req.body;
 
         const reportData = {
+            organizationId: req.organizationId,
             intern: req.user._id,
             type,
             summary,
@@ -27,9 +35,28 @@ router.post('/', protect, authorize('intern'), upload.single('file'), async (req
 
         // Handle file upload
         if (req.file) {
+            const fileSizeMB = req.file.size / (1024 * 1024);
+
+            // Check storage limit
+            if (!req.organization.hasStorageSpace(fileSizeMB)) {
+                // Delete uploaded file
+                fs.unlinkSync(req.file.path);
+                return res.status(403).json({
+                    success: false,
+                    message: `Storage limit exceeded. You have ${req.organization.usage.storageUsedMB.toFixed(1)}MB of ${req.organization.limits.maxStorageMB}MB used.`,
+                    upgradeRequired: true
+                });
+            }
+
             reportData.fileUrl = `/uploads/${req.file.filename}`;
             reportData.fileName = req.file.originalname;
             reportData.fileType = req.file.mimetype;
+            reportData.fileSizeMB = fileSizeMB;
+
+            // Update org storage usage
+            await Organization.findByIdAndUpdate(req.organizationId, {
+                $inc: { 'usage.storageUsedMB': fileSizeMB }
+            });
         }
 
         // Set submitted timestamp if submitting now
@@ -54,9 +81,12 @@ router.post('/', protect, authorize('intern'), upload.single('file'), async (req
 // @route   GET /api/reports/my
 // @desc    Get all reports for the logged-in intern
 // @access  Private (Intern)
-router.get('/my', protect, authorize('intern'), async (req, res) => {
+router.get('/my', authorize('intern'), async (req, res) => {
     try {
-        const reports = await Report.find({ intern: req.user._id })
+        const reports = await Report.find({
+            organizationId: req.organizationId,
+            intern: req.user._id
+        })
             .sort({ createdAt: -1 })
             .populate('reviewedBy', 'name');
 
@@ -76,9 +106,12 @@ router.get('/my', protect, authorize('intern'), async (req, res) => {
 // @route   PUT /api/reports/:id
 // @desc    Update a draft report
 // @access  Private (Intern)
-router.put('/:id', protect, authorize('intern'), upload.single('file'), async (req, res) => {
+router.put('/:id', authorize('intern'), upload.single('file'), async (req, res) => {
     try {
-        let report = await Report.findById(req.params.id);
+        let report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
 
         if (!report) {
             return res.status(404).json({
@@ -111,6 +144,20 @@ router.put('/:id', protect, authorize('intern'), upload.single('file'), async (r
 
         // Handle new file upload
         if (req.file) {
+            const newFileSizeMB = req.file.size / (1024 * 1024);
+            const oldFileSizeMB = report.fileSizeMB || 0;
+            const sizeDiff = newFileSizeMB - oldFileSizeMB;
+
+            // Check storage limit
+            if (sizeDiff > 0 && !req.organization.hasStorageSpace(sizeDiff)) {
+                fs.unlinkSync(req.file.path);
+                return res.status(403).json({
+                    success: false,
+                    message: 'Storage limit exceeded',
+                    upgradeRequired: true
+                });
+            }
+
             // Delete old file if exists
             if (report.fileUrl) {
                 const oldPath = path.join(__dirname, '..', report.fileUrl);
@@ -118,9 +165,16 @@ router.put('/:id', protect, authorize('intern'), upload.single('file'), async (r
                     fs.unlinkSync(oldPath);
                 }
             }
+
             report.fileUrl = `/uploads/${req.file.filename}`;
             report.fileName = req.file.originalname;
             report.fileType = req.file.mimetype;
+            report.fileSizeMB = newFileSizeMB;
+
+            // Update org storage
+            await Organization.findByIdAndUpdate(req.organizationId, {
+                $inc: { 'usage.storageUsedMB': sizeDiff }
+            });
         }
 
         await report.save();
@@ -140,9 +194,12 @@ router.put('/:id', protect, authorize('intern'), upload.single('file'), async (r
 // @route   PUT /api/reports/:id/submit
 // @desc    Submit a draft report
 // @access  Private (Intern)
-router.put('/:id/submit', protect, authorize('intern'), async (req, res) => {
+router.put('/:id/submit', authorize('intern'), async (req, res) => {
     try {
-        const report = await Report.findById(req.params.id);
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
 
         if (!report) {
             return res.status(404).json({
@@ -186,9 +243,12 @@ router.put('/:id/submit', protect, authorize('intern'), async (req, res) => {
 // @route   PUT /api/reports/:id/undo
 // @desc    Undo submission (pull back to draft)
 // @access  Private (Intern)
-router.put('/:id/undo', protect, authorize('intern'), async (req, res) => {
+router.put('/:id/undo', authorize('intern'), async (req, res) => {
     try {
-        const report = await Report.findById(req.params.id);
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
 
         if (!report) {
             return res.status(404).json({
@@ -206,11 +266,10 @@ router.put('/:id/undo', protect, authorize('intern'), async (req, res) => {
         }
 
         // CRITICAL: Only allow undo if status is 'submitted'
-        // Cannot undo if admin has started reviewing or already graded
         if (report.status !== 'submitted') {
             return res.status(400).json({
                 success: false,
-                message: `Cannot undo. Report is currently "${report.status}". Undo is only allowed when status is "submitted".`
+                message: `Cannot undo. Report is "${report.status}". Undo only allowed when "submitted".`
             });
         }
 
@@ -236,14 +295,17 @@ router.put('/:id/undo', protect, authorize('intern'), async (req, res) => {
 // ============================================
 
 // @route   GET /api/reports
-// @desc    Get all submitted reports (Admin roster view)
-// @access  Private (Admin)
-router.get('/', protect, authorize('admin'), async (req, res) => {
+// @desc    Get all submitted reports for this org (Admin view)
+// @access  Private (Admin/Owner)
+router.get('/', authorize('admin', 'owner'), async (req, res) => {
     try {
         const { status, sortBy } = req.query;
 
-        // Build query - admins can see everything except drafts
-        let query = { status: { $ne: 'draft' } };
+        // Build query - scoped to org, exclude drafts
+        let query = {
+            organizationId: req.organizationId,
+            status: { $ne: 'draft' }
+        };
 
         if (status && status !== 'all') {
             query.status = status;
@@ -276,12 +338,17 @@ router.get('/', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   GET /api/reports/stats
-// @desc    Get statistics for admin dashboard
-// @access  Private (Admin)
-router.get('/stats', protect, authorize('admin'), async (req, res) => {
+// @desc    Get statistics for admin dashboard (org-scoped)
+// @access  Private (Admin/Owner)
+router.get('/stats', authorize('admin', 'owner'), async (req, res) => {
     try {
         const stats = await Report.aggregate([
-            { $match: { status: { $ne: 'draft' } } },
+            {
+                $match: {
+                    organizationId: req.organizationId,
+                    status: { $ne: 'draft' }
+                }
+            },
             {
                 $group: {
                     _id: '$status',
@@ -316,10 +383,13 @@ router.get('/stats', protect, authorize('admin'), async (req, res) => {
 
 // @route   GET /api/reports/:id
 // @desc    Get single report and mark as under review
-// @access  Private (Admin)
-router.get('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private (Admin/Owner)
+router.get('/:id', authorize('admin', 'owner'), async (req, res) => {
     try {
-        const report = await Report.findById(req.params.id)
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        })
             .populate('intern', 'name email department')
             .populate('reviewedBy', 'name');
 
@@ -331,7 +401,6 @@ router.get('/:id', protect, authorize('admin'), async (req, res) => {
         }
 
         // If status is 'submitted', mark as 'under_review'
-        // This locks the intern's undo capability
         if (report.status === 'submitted') {
             report.status = 'under_review';
             report.reviewedBy = req.user._id;
@@ -352,12 +421,15 @@ router.get('/:id', protect, authorize('admin'), async (req, res) => {
 
 // @route   PUT /api/reports/:id/grade
 // @desc    Grade a report
-// @access  Private (Admin)
-router.put('/:id/grade', protect, authorize('admin'), async (req, res) => {
+// @access  Private (Admin/Owner)
+router.put('/:id/grade', authorize('admin', 'owner'), async (req, res) => {
     try {
         const { rating, marks, adminFeedback } = req.body;
 
-        const report = await Report.findById(req.params.id);
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
 
         if (!report) {
             return res.status(404).json({
@@ -366,7 +438,7 @@ router.put('/:id/grade', protect, authorize('admin'), async (req, res) => {
             });
         }
 
-        // Can only grade reports that are under review or re-grade already graded
+        // Can only grade reports that are under review
         if (report.status === 'draft' || report.status === 'submitted') {
             return res.status(400).json({
                 success: false,
@@ -374,7 +446,7 @@ router.put('/:id/grade', protect, authorize('admin'), async (req, res) => {
             });
         }
 
-        // Validate rating
+        // Validate
         if (rating && (rating < 1 || rating > 5)) {
             return res.status(400).json({
                 success: false,
@@ -382,7 +454,6 @@ router.put('/:id/grade', protect, authorize('admin'), async (req, res) => {
             });
         }
 
-        // Validate marks
         if (marks !== undefined && (marks < 0 || marks > 100)) {
             return res.status(400).json({
                 success: false,
@@ -418,11 +489,14 @@ router.put('/:id/grade', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   DELETE /api/reports/:id
-// @desc    Delete a report (Intern - only drafts, Admin - any)
+// @desc    Delete a report
 // @access  Private
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
-        const report = await Report.findById(req.params.id);
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
 
         if (!report) {
             return res.status(404).json({
@@ -445,6 +519,13 @@ router.delete('/:id', protect, async (req, res) => {
                     message: 'Can only delete draft reports'
                 });
             }
+        }
+
+        // Update storage usage
+        if (report.fileSizeMB) {
+            await Organization.findByIdAndUpdate(req.organizationId, {
+                $inc: { 'usage.storageUsedMB': -report.fileSizeMB }
+            });
         }
 
         // Delete associated file

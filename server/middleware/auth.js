@@ -30,6 +30,14 @@ exports.protect = async (req, res, next) => {
             });
         }
 
+        // Check if user is active
+        if (!req.user.isActive) {
+            return res.status(401).json({
+                success: false,
+                message: 'Your account has been deactivated'
+            });
+        }
+
         next();
     } catch (error) {
         return res.status(401).json({
@@ -39,13 +47,22 @@ exports.protect = async (req, res, next) => {
     }
 };
 
-// Role-based authorization
+// Role-based authorization - now supports 'owner' role
 exports.authorize = (...roles) => {
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
+        // Owner has access to everything admin has
+        const userRole = req.user.role;
+        const effectiveRoles = [...roles];
+
+        // If admin is in roles, owner should also have access
+        if (roles.includes('admin') && !roles.includes('owner')) {
+            effectiveRoles.push('owner');
+        }
+
+        if (!effectiveRoles.includes(userRole)) {
             return res.status(403).json({
                 success: false,
-                message: `User role '${req.user.role}' is not authorized to access this route`
+                message: `User role '${userRole}' is not authorized`
             });
         }
         next();

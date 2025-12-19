@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PasswordInput from '../components/PasswordInput';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
@@ -25,18 +26,31 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const user = await login(formData.email, formData.password);
+            const { user } = await login(formData.email, formData.password);
             toast.success(`Welcome back, ${user.name}!`);
-            navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+            navigate(user.role === 'intern' ? '/dashboard' : '/admin');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Login failed');
+            const message = error.response?.data?.message || 'Login failed';
+
+            // Show specific error messages with appropriate styling
+            if (message.includes('deactivated')) {
+                toast.error('Your account has been deactivated. Please contact your administrator.', {
+                    duration: 6000,
+                    icon: '🚫'
+                });
+            } else if (message.includes('Invalid credentials')) {
+                toast.error('Invalid email or password. Please try again.', {
+                    icon: '❌'
+                });
+            } else {
+                toast.error(message);
+            }
         } finally {
             setLoading(false);
         }
     };
 
     const handleGoogleLogin = () => {
-        // Will be implemented with OAuth
         window.location.href = 'http://localhost:5000/api/auth/google';
     };
 
@@ -86,14 +100,11 @@ const Login = () => {
 
                     <div className="form-group">
                         <label className="form-label">Password</label>
-                        <input
-                            type="password"
+                        <PasswordInput
                             name="password"
-                            className="form-input"
-                            placeholder="Enter your password"
                             value={formData.password}
                             onChange={handleChange}
-                            required
+                            placeholder="Enter your password"
                         />
                     </div>
 

@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
+    organizationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: [true, 'Organization is required']
+    },
     name: {
         type: String,
         required: [true, 'Please provide a name'],
@@ -12,7 +17,6 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: [true, 'Please provide an email'],
-        unique: true,
         lowercase: true,
         match: [
             /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
@@ -27,7 +31,7 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['intern', 'admin'],
+        enum: ['intern', 'admin', 'owner'],
         default: 'intern'
     },
     department: {
@@ -37,7 +41,6 @@ const userSchema = new mongoose.Schema({
     // Google OAuth
     googleId: {
         type: String,
-        unique: true,
         sparse: true
     },
     // Email verification
@@ -47,16 +50,28 @@ const userSchema = new mongoose.Schema({
     },
     emailVerificationToken: String,
     emailVerificationExpires: Date,
+    // Invitation
+    invitedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    invitedAt: Date,
+    inviteToken: String,
+    inviteTokenExpires: Date,
     // Status
     isActive: {
         type: Boolean,
         default: true
     },
+    lastLoginAt: Date,
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
+
+// Compound unique index: email must be unique within an organization
+userSchema.index({ email: 1, organizationId: 1 }, { unique: true });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {
@@ -84,6 +99,30 @@ userSchema.methods.generateEmailVerificationToken = function () {
     this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
     return token;
+};
+
+// Generate invite token
+userSchema.methods.generateInviteToken = function () {
+    const token = crypto.randomBytes(32).toString('hex');
+
+    this.inviteToken = crypto
+        .createHash('sha256')
+        .update(token)
+        .digest('hex');
+
+    this.inviteTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    return token;
+};
+
+// Check if user is org owner
+userSchema.methods.isOwner = function () {
+    return this.role === 'owner';
+};
+
+// Check if user can manage others (admin or owner)
+userSchema.methods.canManageUsers = function () {
+    return ['admin', 'owner'].includes(this.role);
 };
 
 module.exports = mongoose.model('User', userSchema);

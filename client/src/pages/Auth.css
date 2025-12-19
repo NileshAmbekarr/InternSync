@@ -82,3 +82,81 @@
 .auth-footer a:hover {
     text-decoration: underline;
 }
+
+/* Form Error States */
+.form-input.error,
+.password-input-wrapper.error .form-input {
+    border-color: var(--color-error);
+}
+
+.form-input.error:focus,
+.password-input-wrapper.error .form-input:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.form-error {
+    display: block;
+    color: var(--color-error);
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+/* Status Indicators */
+.status-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.status-icon.success {
+    color: var(--color-success);
+}
+
+.status-icon.error {
+    color: var(--color-error);
+}
+
+.status-message {
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.6;
+}
+
+/* Google Button */
+.btn-google {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+}
+
+.btn-google:hover {
+    background: var(--bg-card);
+    border-color: var(--text-muted);
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-muted);
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.divider span {
+    font-size: 0.85rem;
+    white-space: nowrap;
+}

@@ -12,6 +12,8 @@ import Onboarding from './pages/Onboarding';
 import InternDashboard from './pages/InternDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ReviewReport from './pages/ReviewReport';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 
 // Redirect authenticated users to their dashboard
 const PublicRoute = ({ children }) => {
@@ -60,6 +62,26 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['owner']}>
                 <Onboarding />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Profile (All authenticated users) */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={['intern', 'admin', 'owner']}>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Settings (Admin/Owner only) */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                <Settings />
               </ProtectedRoute>
             }
           />

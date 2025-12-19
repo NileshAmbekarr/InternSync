@@ -1,46 +1,58 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../utils/api';
+import PasswordInput from '../components/PasswordInput';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
 const AcceptInvite = () => {
     const { token } = useParams();
     const navigate = useNavigate();
-    const [status, setStatus] = useState('loading'); // loading, form, error
+    const [status, setStatus] = useState('form'); // form, error
     const [formData, setFormData] = useState({
         name: '',
         password: '',
         confirmPassword: ''
     });
+    const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        // Just show the form - token will be validated on submit
-        if (token) {
-            setStatus('form');
-        } else {
-            setStatus('error');
-        }
-    }, [token]);
-
     const handleChange = (e) => {
+        const { name, value } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [name]: value
         });
+
+        // Clear error when typing
+        if (errors[name]) {
+            setErrors({ ...errors, [name]: '' });
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+
+        if (!formData.name.trim()) {
+            newErrors.name = 'Name is required';
+        }
+
+        if (formData.password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            newErrors.confirmPassword = 'Passwords do not match';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (formData.password !== formData.confirmPassword) {
-            toast.error('Passwords do not match');
-            return;
-        }
-
-        if (formData.password.length < 6) {
-            toast.error('Password must be at least 6 characters');
+        if (!validateForm()) {
             return;
         }
 
@@ -56,26 +68,21 @@ const AcceptInvite = () => {
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
 
-            toast.success('Welcome to the team!');
-            navigate('/dashboard');
+            toast.success('Welcome to the team! 🎉', {
+                duration: 5000
+            });
+
+            // Redirect based on role
+            const role = response.data.user.role;
+            navigate(role === 'intern' ? '/dashboard' : '/admin');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Invalid or expired invitation');
+            const message = error.response?.data?.message || 'Invalid or expired invitation';
+            toast.error(message, { duration: 6000 });
             setStatus('error');
         } finally {
             setLoading(false);
         }
     };
-
-    if (status === 'loading') {
-        return (
-            <div className="auth-page">
-                <div className="loading-container">
-                    <div className="spinner"></div>
-                    <p>Loading...</p>
-                </div>
-            </div>
-        );
-    }
 
     if (status === 'error') {
         return (
@@ -86,10 +93,10 @@ const AcceptInvite = () => {
                         <h1 className="logo-text">InternSync</h1>
                     </div>
                     <div style={{ padding: 'var(--spacing-xl) 0' }}>
-                        <div style={{ fontSize: '4rem', marginBottom: 'var(--spacing-md)' }}>❌</div>
+                        <div className="status-icon error">❌</div>
                         <h2>Invalid Invitation</h2>
-                        <p style={{ color: 'var(--text-muted)' }}>
-                            This invitation link is invalid or has expired.
+                        <p className="status-message">
+                            This invitation link is invalid or has expired. Please ask your administrator to send a new invitation.
                         </p>
                         <Link to="/login" className="btn btn-primary" style={{ marginTop: 'var(--spacing-lg)' }}>
                             Go to Login
@@ -108,7 +115,7 @@ const AcceptInvite = () => {
                         <span className="logo-icon">⚡</span>
                         <h1 className="logo-text">InternSync</h1>
                     </div>
-                    <p className="auth-subtitle">Complete your account setup</p>
+                    <p className="auth-subtitle">Complete your account setup to join your team.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="auth-form">
@@ -117,38 +124,40 @@ const AcceptInvite = () => {
                         <input
                             type="text"
                             name="name"
-                            className="form-input"
+                            className={`form-input ${errors.name ? 'error' : ''}`}
                             placeholder="Enter your full name"
                             value={formData.name}
                             onChange={handleChange}
                             required
                         />
+                        {errors.name && <span className="form-error">{errors.name}</span>}
                     </div>
 
                     <div className="form-group">
                         <label className="form-label">Create Password</label>
-                        <input
-                            type="password"
+                        <PasswordInput
                             name="password"
-                            className="form-input"
-                            placeholder="Create a password"
                             value={formData.password}
                             onChange={handleChange}
-                            required
+                            placeholder="Create a password"
+                            minLength={6}
+                            className={errors.password ? 'error' : ''}
                         />
+                        {errors.password && <span className="form-error">{errors.password}</span>}
                     </div>
 
                     <div className="form-group">
                         <label className="form-label">Confirm Password</label>
-                        <input
-                            type="password"
+                        <PasswordInput
                             name="confirmPassword"
-                            className="form-input"
-                            placeholder="Confirm password"
                             value={formData.confirmPassword}
                             onChange={handleChange}
-                            required
+                            placeholder="Confirm password"
+                            className={errors.confirmPassword ? 'error' : ''}
                         />
+                        {errors.confirmPassword && (
+                            <span className="form-error">{errors.confirmPassword}</span>
+                        )}
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-lg auth-btn" disabled={loading}>
