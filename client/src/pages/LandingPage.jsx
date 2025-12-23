@@ -134,7 +134,7 @@ const LandingPage = () => {
                             <span className="brand-text">InternSync</span>
                         </div>
                         <p className="footer-text">
-                            © 2024 InternSync. Built for better internships.
+                            © 2025 InternSync. | Built for better internships.
                         </p>
                     </div>
                 </div>

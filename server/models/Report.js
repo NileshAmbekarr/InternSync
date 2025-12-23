@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const reportSchema = new mongoose.Schema({
+    organizationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: [true, 'Organization is required']
+    },
     intern: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -24,6 +29,10 @@ const reportSchema = new mongoose.Schema({
     },
     fileType: {
         type: String
+    },
+    fileSizeMB: {
+        type: Number,
+        default: 0
     },
     // State Machine: draft -> submitted -> under_review -> graded
     status: {
@@ -61,9 +70,9 @@ const reportSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for efficient queries
-reportSchema.index({ intern: 1, status: 1 });
-reportSchema.index({ status: 1, submittedAt: -1 });
+// Index for efficient queries - now scoped by organization
+reportSchema.index({ organizationId: 1, intern: 1, status: 1 });
+reportSchema.index({ organizationId: 1, status: 1, submittedAt: -1 });
 
 // Virtual to check if undo is allowed
 reportSchema.virtual('canUndo').get(function () {

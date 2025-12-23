@@ -1,0 +1,167 @@
+/* Onboarding Page Styles */
+
+.onboarding-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    background: var(--bg-primary);
+}
+
+.onboarding-container {
+    width: 100%;
+    max-width: 600px;
+}
+
+/* Progress Indicator */
+.onboarding-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.progress-step {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: all var(--transition-base);
+}
+
+.progress-step.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
+.progress-line {
+    width: 60px;
+    height: 2px;
+    background: var(--border-color);
+    margin: 0 var(--spacing-sm);
+}
+
+/* Step Content */
+.onboarding-step {
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-2xl);
+}
+
+.step-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.onboarding-step h1 {
+    font-size: 1.8rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.step-subtitle {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Info Card */
+.info-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    text-align: left;
+}
+
+.info-card h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--color-primary);
+}
+
+.info-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-card li {
+    padding: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+}
+
+/* Invites */
+.invites-list {
+    margin-bottom: var(--spacing-lg);
+}
+
+.invite-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.invite-row .form-input {
+    flex: 1;
+}
+
+.invite-row .role-select {
+    width: 120px;
+    flex: none;
+}
+
+.invite-row .btn-ghost {
+    padding: var(--spacing-sm);
+    min-width: auto;
+}
+
+.add-invite-btn {
+    width: 100%;
+    margin-bottom: var(--spacing-lg);
+}
+
+.step-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+.step-actions .btn {
+    flex: 1;
+}
+
+/* Quick Tips */
+.quick-tips {
+    text-align: left;
+    margin-bottom: var(--spacing-xl);
+}
+
+.quick-tips h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.tip {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+}
+
+.tip-icon {
+    font-size: 1.5rem;
+}
+
+.tip p {
+    margin: 0;
+    color: var(--text-secondary);
+}
