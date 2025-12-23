@@ -30,6 +30,9 @@ const reportSchema = new mongoose.Schema({
     fileType: {
         type: String
     },
+    fileKey: {
+        type: String  // R2/S3 object key
+    },
     fileSizeMB: {
         type: Number,
         default: 0

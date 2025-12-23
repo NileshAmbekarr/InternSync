@@ -5,6 +5,7 @@ const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
 const { attachOrganization, checkStorageLimit } = require('../middleware/organization');
 const upload = require('../middleware/upload');
+const fileService = require('../utils/fileService');
 const path = require('path');
 const fs = require('fs');
 
@@ -39,8 +40,6 @@ router.post('/', authorize('intern'), upload.single('file'), async (req, res) =>
 
             // Check storage limit
             if (!req.organization.hasStorageSpace(fileSizeMB)) {
-                // Delete uploaded file
-                fs.unlinkSync(req.file.path);
                 return res.status(403).json({
                     success: false,
                     message: `Storage limit exceeded. You have ${req.organization.usage.storageUsedMB.toFixed(1)}MB of ${req.organization.limits.maxStorageMB}MB used.`,
@@ -48,10 +47,14 @@ router.post('/', authorize('intern'), upload.single('file'), async (req, res) =>
                 });
             }
 
-            reportData.fileUrl = `/uploads/${req.file.filename}`;
-            reportData.fileName = req.file.originalname;
-            reportData.fileType = req.file.mimetype;
-            reportData.fileSizeMB = fileSizeMB;
+            // Upload file (R2 or local)
+            const fileData = await fileService.uploadFile(req.file, req.organizationId.toString());
+
+            reportData.fileUrl = fileData.fileUrl;
+            reportData.fileKey = fileData.fileKey;
+            reportData.fileName = fileData.fileName;
+            reportData.fileType = fileData.fileType;
+            reportData.fileSizeMB = fileData.fileSizeMB;
 
             // Update org storage usage
             await Organization.findByIdAndUpdate(req.organizationId, {
@@ -71,6 +74,7 @@ router.post('/', authorize('intern'), upload.single('file'), async (req, res) =>
             report
         });
     } catch (error) {
+        console.error('Create report error:', error);
         res.status(500).json({
             success: false,
             message: error.message
@@ -94,6 +98,57 @@ router.get('/my', authorize('intern'), async (req, res) => {
             success: true,
             count: reports.length,
             reports
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// @route   GET /api/reports/download/:id
+// @desc    Get download URL for a report file
+// @access  Private (Owner of report or Admin)
+router.get('/download/:id', async (req, res) => {
+    try {
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
+
+        if (!report) {
+            return res.status(404).json({
+                success: false,
+                message: 'Report not found'
+            });
+        }
+
+        // Check access - must be owner or admin
+        const isOwner = report.intern.toString() === req.user._id.toString();
+        const isAdmin = ['admin', 'owner'].includes(req.user.role);
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to download this file'
+            });
+        }
+
+        if (!report.fileKey && !report.fileUrl) {
+            return res.status(404).json({
+                success: false,
+                message: 'No file attached to this report'
+            });
+        }
+
+        const downloadUrl = await fileService.getDownloadUrl(report);
+
+        res.json({
+            success: true,
+            downloadUrl,
+            fileName: report.fileName,
+            fileType: report.fileType
         });
     } catch (error) {
         res.status(500).json({
@@ -150,7 +205,6 @@ router.put('/:id', authorize('intern'), upload.single('file'), async (req, res) 
 
             // Check storage limit
             if (sizeDiff > 0 && !req.organization.hasStorageSpace(sizeDiff)) {
-                fs.unlinkSync(req.file.path);
                 return res.status(403).json({
                     success: false,
                     message: 'Storage limit exceeded',
@@ -158,18 +212,17 @@ router.put('/:id', authorize('intern'), upload.single('file'), async (req, res) 
                 });
             }
 
-            // Delete old file if exists
-            if (report.fileUrl) {
-                const oldPath = path.join(__dirname, '..', report.fileUrl);
-                if (fs.existsSync(oldPath)) {
-                    fs.unlinkSync(oldPath);
-                }
-            }
+            // Delete old file
+            await fileService.deleteFile(report);
 
-            report.fileUrl = `/uploads/${req.file.filename}`;
-            report.fileName = req.file.originalname;
-            report.fileType = req.file.mimetype;
-            report.fileSizeMB = newFileSizeMB;
+            // Upload new file
+            const fileData = await fileService.uploadFile(req.file, req.organizationId.toString());
+
+            report.fileUrl = fileData.fileUrl;
+            report.fileKey = fileData.fileKey;
+            report.fileName = fileData.fileName;
+            report.fileType = fileData.fileType;
+            report.fileSizeMB = fileData.fileSizeMB;
 
             // Update org storage
             await Organization.findByIdAndUpdate(req.organizationId, {
@@ -208,7 +261,6 @@ router.put('/:id/submit', authorize('intern'), async (req, res) => {
             });
         }
 
-        // Check ownership
         if (report.intern.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -216,7 +268,6 @@ router.put('/:id/submit', authorize('intern'), async (req, res) => {
             });
         }
 
-        // Only submit drafts
         if (report.status !== 'draft') {
             return res.status(400).json({
                 success: false,
@@ -230,6 +281,7 @@ router.put('/:id/submit', authorize('intern'), async (req, res) => {
 
         res.json({
             success: true,
+            message: 'Report submitted successfully',
             report
         });
     } catch (error) {
@@ -241,7 +293,7 @@ router.put('/:id/submit', authorize('intern'), async (req, res) => {
 });
 
 // @route   PUT /api/reports/:id/undo
-// @desc    Undo submission (pull back to draft)
+// @desc    Undo submission - return to draft (only if not reviewed yet)
 // @access  Private (Intern)
 router.put('/:id/undo', authorize('intern'), async (req, res) => {
     try {
@@ -257,7 +309,6 @@ router.put('/:id/undo', authorize('intern'), async (req, res) => {
             });
         }
 
-        // Check ownership
         if (report.intern.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -265,7 +316,6 @@ router.put('/:id/undo', authorize('intern'), async (req, res) => {
             });
         }
 
-        // CRITICAL: Only allow undo if status is 'submitted'
         if (report.status !== 'submitted') {
             return res.status(400).json({
                 success: false,
@@ -290,6 +340,60 @@ router.put('/:id/undo', authorize('intern'), async (req, res) => {
     }
 });
 
+// @route   DELETE /api/reports/:id
+// @desc    Delete a draft report
+// @access  Private (Intern)
+router.delete('/:id', authorize('intern'), async (req, res) => {
+    try {
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
+
+        if (!report) {
+            return res.status(404).json({
+                success: false,
+                message: 'Report not found'
+            });
+        }
+
+        if (report.intern.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized'
+            });
+        }
+
+        if (report.status !== 'draft') {
+            return res.status(400).json({
+                success: false,
+                message: 'Can only delete draft reports'
+            });
+        }
+
+        // Delete file and update storage
+        if (report.fileSizeMB > 0) {
+            await fileService.deleteFile(report);
+
+            await Organization.findByIdAndUpdate(req.organizationId, {
+                $inc: { 'usage.storageUsedMB': -report.fileSizeMB }
+            });
+        }
+
+        await report.deleteOne();
+
+        res.json({
+            success: true,
+            message: 'Report deleted'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 // ============================================
 // ADMIN ROUTES
 // ============================================
@@ -301,7 +405,6 @@ router.get('/', authorize('admin', 'owner'), async (req, res) => {
     try {
         const { status, sortBy } = req.query;
 
-        // Build query - scoped to org, exclude drafts
         let query = {
             organizationId: req.organizationId,
             status: { $ne: 'draft' }
@@ -311,7 +414,6 @@ router.get('/', authorize('admin', 'owner'), async (req, res) => {
             query.status = status;
         }
 
-        // Build sort
         let sort = { submittedAt: -1 };
         if (sortBy === 'status') {
             sort = { status: 1, submittedAt: -1 };
@@ -338,7 +440,7 @@ router.get('/', authorize('admin', 'owner'), async (req, res) => {
 });
 
 // @route   GET /api/reports/stats
-// @desc    Get statistics for admin dashboard (org-scoped)
+// @desc    Get statistics for admin dashboard
 // @access  Private (Admin/Owner)
 router.get('/stats', authorize('admin', 'owner'), async (req, res) => {
     try {
@@ -357,21 +459,21 @@ router.get('/stats', authorize('admin', 'owner'), async (req, res) => {
             }
         ]);
 
-        const formattedStats = {
+        const result = {
+            total: 0,
             submitted: 0,
             under_review: 0,
             graded: 0
         };
 
         stats.forEach(s => {
-            formattedStats[s._id] = s.count;
+            result[s._id] = s.count;
+            result.total += s.count;
         });
-
-        formattedStats.total = formattedStats.submitted + formattedStats.under_review + formattedStats.graded;
 
         res.json({
             success: true,
-            stats: formattedStats
+            stats: result
         });
     } catch (error) {
         res.status(500).json({
@@ -382,9 +484,9 @@ router.get('/stats', authorize('admin', 'owner'), async (req, res) => {
 });
 
 // @route   GET /api/reports/:id
-// @desc    Get single report and mark as under review
-// @access  Private (Admin/Owner)
-router.get('/:id', authorize('admin', 'owner'), async (req, res) => {
+// @desc    Get single report by ID
+// @access  Private (Admin/Owner or Owner of report)
+router.get('/:id', async (req, res) => {
     try {
         const report = await Report.findOne({
             _id: req.params.id,
@@ -400,15 +502,60 @@ router.get('/:id', authorize('admin', 'owner'), async (req, res) => {
             });
         }
 
-        // If status is 'submitted', mark as 'under_review'
-        if (report.status === 'submitted') {
-            report.status = 'under_review';
-            report.reviewedBy = req.user._id;
-            await report.save();
+        // Check access
+        const isOwner = report.intern._id.toString() === req.user._id.toString();
+        const isAdmin = ['admin', 'owner'].includes(req.user.role);
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized'
+            });
         }
 
         res.json({
             success: true,
+            report
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// @route   PUT /api/reports/:id/review
+// @desc    Start review - set status to under_review
+// @access  Private (Admin/Owner)
+router.put('/:id/review', authorize('admin', 'owner'), async (req, res) => {
+    try {
+        const report = await Report.findOne({
+            _id: req.params.id,
+            organizationId: req.organizationId
+        });
+
+        if (!report) {
+            return res.status(404).json({
+                success: false,
+                message: 'Report not found'
+            });
+        }
+
+        if (report.status !== 'submitted') {
+            return res.status(400).json({
+                success: false,
+                message: 'Report is not in submitted status'
+            });
+        }
+
+        report.status = 'under_review';
+        report.reviewedBy = req.user._id;
+        await report.save();
+
+        res.json({
+            success: true,
+            message: 'Review started',
             report
         });
     } catch (error) {
@@ -438,109 +585,26 @@ router.put('/:id/grade', authorize('admin', 'owner'), async (req, res) => {
             });
         }
 
-        // Can only grade reports that are under review
-        if (report.status === 'draft' || report.status === 'submitted') {
+        if (!['submitted', 'under_review'].includes(report.status)) {
             return res.status(400).json({
                 success: false,
-                message: 'Report must be under review before grading'
+                message: 'Report must be submitted or under review to grade'
             });
         }
 
-        // Validate
-        if (rating && (rating < 1 || rating > 5)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Rating must be between 1 and 5'
-            });
-        }
-
-        if (marks !== undefined && (marks < 0 || marks > 100)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Marks must be between 0 and 100'
-            });
-        }
-
-        // Update report
-        if (rating) report.rating = rating;
-        if (marks !== undefined) report.marks = marks;
-        if (adminFeedback) report.adminFeedback = adminFeedback;
         report.status = 'graded';
+        report.rating = rating;
+        report.marks = marks;
+        report.adminFeedback = adminFeedback;
         report.reviewedBy = req.user._id;
         report.reviewedAt = new Date();
 
         await report.save();
 
-        const populatedReport = await Report.findById(report._id)
-            .populate('intern', 'name email department')
-            .populate('reviewedBy', 'name');
-
         res.json({
             success: true,
             message: 'Report graded successfully',
-            report: populatedReport
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
-
-// @route   DELETE /api/reports/:id
-// @desc    Delete a report
-// @access  Private
-router.delete('/:id', async (req, res) => {
-    try {
-        const report = await Report.findOne({
-            _id: req.params.id,
-            organizationId: req.organizationId
-        });
-
-        if (!report) {
-            return res.status(404).json({
-                success: false,
-                message: 'Report not found'
-            });
-        }
-
-        // Interns can only delete their own drafts
-        if (req.user.role === 'intern') {
-            if (report.intern.toString() !== req.user._id.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Not authorized'
-                });
-            }
-            if (report.status !== 'draft') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Can only delete draft reports'
-                });
-            }
-        }
-
-        // Update storage usage
-        if (report.fileSizeMB) {
-            await Organization.findByIdAndUpdate(req.organizationId, {
-                $inc: { 'usage.storageUsedMB': -report.fileSizeMB }
-            });
-        }
-
-        // Delete associated file
-        if (report.fileUrl) {
-            const filePath = path.join(__dirname, '..', report.fileUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
-
-        await Report.findByIdAndDelete(req.params.id);
-
-        res.json({
-            success: true,
-            message: 'Report deleted'
+            report
         });
     } catch (error) {
         res.status(500).json({
