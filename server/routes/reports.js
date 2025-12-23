@@ -6,8 +6,6 @@ const { protect, authorize } = require('../middleware/auth');
 const { attachOrganization, checkStorageLimit } = require('../middleware/organization');
 const upload = require('../middleware/upload');
 const fileService = require('../utils/fileService');
-const path = require('path');
-const fs = require('fs');
 
 const router = express.Router();
 
