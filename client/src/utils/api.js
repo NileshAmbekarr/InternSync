@@ -67,6 +67,9 @@ export const reportsAPI = {
     getStats: () => api.get('/reports/stats'),
     getOne: (id) => api.get(`/reports/${id}`),
     grade: (id, data) => api.put(`/reports/${id}/grade`, data),
+
+    // File download (R2 or local)
+    getDownloadUrl: (id) => api.get(`/reports/download/${id}`),
 };
 
 // Users API

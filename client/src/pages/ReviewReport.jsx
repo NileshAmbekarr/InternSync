@@ -12,6 +12,7 @@ const ReviewReport = () => {
     const navigate = useNavigate();
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [downloading, setDownloading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
         rating: 0,
@@ -42,6 +43,30 @@ const ReviewReport = () => {
             navigate('/admin');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDownload = async () => {
+        setDownloading(true);
+        try {
+            const response = await reportsAPI.getDownloadUrl(id);
+            const { downloadUrl, fileName } = response.data;
+
+            // Open the download URL in a new tab/window
+            // For R2: this will be a signed URL
+            // For local: this will be /uploads/filename
+            if (downloadUrl.startsWith('/uploads')) {
+                // Local file - construct full URL
+                const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                window.open(`${baseUrl}${downloadUrl}`, '_blank');
+            } else {
+                // R2 signed URL - use directly
+                window.open(downloadUrl, '_blank');
+            }
+        } catch (error) {
+            toast.error('Failed to get download link');
+        } finally {
+            setDownloading(false);
         }
     };
 
@@ -83,11 +108,6 @@ const ReviewReport = () => {
             hour: '2-digit',
             minute: '2-digit',
         });
-    };
-
-    const getFileDownloadUrl = (fileUrl) => {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        return `${baseUrl}${fileUrl}`;
     };
 
     if (loading) {
@@ -186,16 +206,22 @@ const ReviewReport = () => {
                                         <div className="attachment-card">
                                             <div className="attachment-info">
                                                 <span className="attachment-icon">📄</span>
-                                                <span className="attachment-name">{report.fileName}</span>
+                                                <div className="attachment-details">
+                                                    <span className="attachment-name">{report.fileName}</span>
+                                                    {report.fileSizeMB && (
+                                                        <span className="attachment-size">
+                                                            {report.fileSizeMB.toFixed(2)} MB
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <a
-                                                href={getFileDownloadUrl(report.fileUrl)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                onClick={handleDownload}
+                                                disabled={downloading}
                                                 className="btn btn-secondary btn-sm"
                                             >
-                                                📥 Download
-                                            </a>
+                                                {downloading ? '⏳ Loading...' : '📥 Download'}
+                                            </button>
                                         </div>
                                     </div>
                                 )}

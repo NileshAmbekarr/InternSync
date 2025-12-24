@@ -50,9 +50,12 @@ const Login = () => {
         }
     };
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:5000/api/auth/google';
+        window.location.href = `${API_URL}/auth/google`;
     };
+
 
     return (
         <div className="auth-page">
