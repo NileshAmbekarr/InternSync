@@ -98,10 +98,10 @@ const Register = () => {
         }
     };
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
     const handleGoogleLogin = () => {
-        window.location.href = `${API_URL}/api/auth/google`;
+        window.location.href = `${API_URL}/auth/google`;
     };
 
     return (
