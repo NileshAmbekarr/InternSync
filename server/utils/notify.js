@@ -1,5 +1,6 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { sendNotificationEmail } = require('./email');
 
 /**
  * Create one or more notifications without throwing into the caller's flow.
@@ -16,34 +17,54 @@ async function createNotifications(notifications) {
     }
 }
 
+// Fire an email without blocking the request; respects the user's preference.
+function emailIfEnabled(user, payload) {
+    if (!user || user.emailNotifications === false || !user.email) return;
+    sendNotificationEmail(user.email, user.name, payload).catch((err) =>
+        console.error('Notification email failed:', err.message)
+    );
+}
+
 /**
- * Notify every active admin/owner in an organization (e.g. a new submission).
+ * Notify a single user: in-app notification + (optional) email.
  */
-async function notifyOrgAdmins(organizationId, { excludeUserId, type, title, message, link }) {
+async function notifyUser(recipientId, { organizationId, type, title, message, link, email = true }) {
+    await createNotifications({ organizationId, recipient: recipientId, type, title, message, link });
+
+    if (!email) return;
+    try {
+        const user = await User.findById(recipientId).select('name email emailNotifications');
+        emailIfEnabled(user, { title, message, link });
+    } catch (err) {
+        console.error('notifyUser email lookup failed:', err.message);
+    }
+}
+
+/**
+ * Notify every active admin/owner in an organization: in-app + (optional) email.
+ */
+async function notifyOrgAdmins(organizationId, { excludeUserId, type, title, message, link, email = true }) {
     try {
         const admins = await User.find({
             organizationId,
             role: { $in: ['admin', 'owner'] },
             isActive: true
-        }).select('_id');
+        }).select('name email emailNotifications');
 
-        const recipients = admins
-            .map((a) => a._id)
-            .filter((id) => !excludeUserId || id.toString() !== excludeUserId.toString());
+        const recipients = admins.filter(
+            (a) => !excludeUserId || a._id.toString() !== excludeUserId.toString()
+        );
 
         await createNotifications(
-            recipients.map((recipient) => ({
-                organizationId,
-                recipient,
-                type,
-                title,
-                message,
-                link
-            }))
+            recipients.map((r) => ({ organizationId, recipient: r._id, type, title, message, link }))
         );
+
+        if (email) {
+            recipients.forEach((r) => emailIfEnabled(r, { title, message, link }));
+        }
     } catch (err) {
         console.error('notifyOrgAdmins failed:', err.message);
     }
 }
 
-module.exports = { createNotifications, notifyOrgAdmins };
+module.exports = { createNotifications, notifyUser, notifyOrgAdmins };

@@ -130,12 +130,13 @@ router.get('/:id', async (req, res) => {
 // @access  Private
 router.put('/profile', async (req, res) => {
     try {
-        const { name, department } = req.body;
+        const { name, department, emailNotifications } = req.body;
 
         const user = await User.findById(req.user._id);
 
         if (name) user.name = name;
-        if (department) user.department = department;
+        if (department !== undefined) user.department = department;
+        if (typeof emailNotifications === 'boolean') user.emailNotifications = emailNotifications;
 
         await user.save();
 
@@ -146,7 +147,8 @@ router.put('/profile', async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                department: user.department
+                department: user.department,
+                emailNotifications: user.emailNotifications
             }
         });
     } catch (error) {

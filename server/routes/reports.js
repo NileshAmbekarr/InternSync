@@ -6,7 +6,8 @@ const { protect, authorize } = require('../middleware/auth');
 const { attachOrganization, checkStorageLimit } = require('../middleware/organization');
 const upload = require('../middleware/upload');
 const fileService = require('../utils/fileService');
-const { createNotifications, notifyOrgAdmins } = require('../utils/notify');
+const Comment = require('../models/Comment');
+const { notifyUser, notifyOrgAdmins } = require('../utils/notify');
 
 const router = express.Router();
 
@@ -698,9 +699,8 @@ router.put('/:id/review', authorize('admin', 'owner'), async (req, res) => {
         report.reviewedBy = req.user._id;
         await report.save();
 
-        await createNotifications({
+        await notifyUser(report.intern, {
             organizationId: req.organizationId,
-            recipient: report.intern,
             type: 'report_reviewed',
             title: 'Your report is under review',
             message: `${req.user.name} started reviewing your ${report.type} report.`,
@@ -755,9 +755,8 @@ router.put('/:id/grade', authorize('admin', 'owner'), async (req, res) => {
 
         await report.save();
 
-        await createNotifications({
+        await notifyUser(report.intern, {
             organizationId: req.organizationId,
-            recipient: report.intern,
             type: 'report_graded',
             title: 'Your report was graded',
             message: `${req.user.name} graded your ${report.type} report${report.marks != null ? ` — ${report.marks}/100` : ''}.`,
@@ -774,6 +773,125 @@ router.put('/:id/grade', authorize('admin', 'owner'), async (req, res) => {
             success: false,
             message: error.message
         });
+    }
+});
+
+// ============================================
+// COMMENTS (discussion thread on a report)
+// ============================================
+
+// Load the report and verify the caller may access its thread
+const loadReportForThread = async (req, res) => {
+    const report = await Report.findOne({
+        _id: req.params.id,
+        organizationId: req.organizationId
+    });
+
+    if (!report) {
+        res.status(404).json({ success: false, message: 'Report not found' });
+        return null;
+    }
+
+    const isReportOwner = report.intern.toString() === req.user._id.toString();
+    const isAdmin = ['admin', 'owner'].includes(req.user.role);
+
+    if (!isReportOwner && !isAdmin) {
+        res.status(403).json({ success: false, message: 'Not authorized' });
+        return null;
+    }
+
+    return report;
+};
+
+// @route   GET /api/reports/:id/comments
+// @desc    List the comment thread for a report
+// @access  Private (report owner or admin/owner)
+router.get('/:id/comments', async (req, res) => {
+    try {
+        const report = await loadReportForThread(req, res);
+        if (!report) return;
+
+        const comments = await Comment.find({ report: report._id })
+            .populate('author', 'name role')
+            .sort({ createdAt: 1 });
+
+        res.json({ success: true, count: comments.length, comments });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// @route   POST /api/reports/:id/comments
+// @desc    Add a comment to a report's thread
+// @access  Private (report owner or admin/owner)
+router.post('/:id/comments', async (req, res) => {
+    try {
+        const report = await loadReportForThread(req, res);
+        if (!report) return;
+
+        const { body } = req.body;
+        if (!body || !body.trim()) {
+            return res.status(400).json({ success: false, message: 'Comment cannot be empty' });
+        }
+
+        let comment = await Comment.create({
+            organizationId: req.organizationId,
+            report: report._id,
+            author: req.user._id,
+            body: body.trim()
+        });
+        comment = await comment.populate('author', 'name role');
+
+        // Notify the other side of the conversation
+        if (req.user.role === 'intern') {
+            await notifyOrgAdmins(req.organizationId, {
+                excludeUserId: req.user._id,
+                type: 'report_comment',
+                title: 'New comment on a report',
+                message: `${req.user.name} commented on a ${report.type} report.`,
+                link: `/admin/review/${report._id}`
+            });
+        } else if (report.intern.toString() !== req.user._id.toString()) {
+            await notifyUser(report.intern, {
+                organizationId: req.organizationId,
+                type: 'report_comment',
+                title: 'New comment on your report',
+                message: `${req.user.name} commented on your ${report.type} report.`,
+                link: '/my-reports'
+            });
+        }
+
+        res.status(201).json({ success: true, comment });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// @route   DELETE /api/reports/:id/comments/:commentId
+// @desc    Delete a comment (author, or any admin/owner)
+// @access  Private
+router.delete('/:id/comments/:commentId', async (req, res) => {
+    try {
+        const comment = await Comment.findOne({
+            _id: req.params.commentId,
+            report: req.params.id,
+            organizationId: req.organizationId
+        });
+
+        if (!comment) {
+            return res.status(404).json({ success: false, message: 'Comment not found' });
+        }
+
+        const isAuthor = comment.author.toString() === req.user._id.toString();
+        const isAdmin = ['admin', 'owner'].includes(req.user.role);
+        if (!isAuthor && !isAdmin) {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+
+        await comment.deleteOne();
+        res.json({ success: true, message: 'Comment deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

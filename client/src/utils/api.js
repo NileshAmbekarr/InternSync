@@ -72,6 +72,11 @@ export const reportsAPI = {
 
     // File download (R2 or local)
     getDownloadUrl: (id) => api.get(`/reports/download/${id}`),
+
+    // Comment thread
+    getComments: (id) => api.get(`/reports/${id}/comments`),
+    addComment: (id, body) => api.post(`/reports/${id}/comments`, { body }),
+    deleteComment: (id, commentId) => api.delete(`/reports/${id}/comments/${commentId}`),
 };
 
 // Users API

@@ -12,6 +12,7 @@ import {
     Clock,
     Inbox,
     X,
+    MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { reportsAPI } from '../utils/api';
@@ -20,6 +21,7 @@ import StatCard from '../components/StatCard';
 import EmptyState from '../components/EmptyState';
 import FileDropzone from '../components/FileDropzone';
 import StarRating from '../components/StarRating';
+import CommentThread from '../components/CommentThread';
 import toast from 'react-hot-toast';
 import './InternDashboard.css';
 
@@ -31,6 +33,7 @@ const InternDashboard = () => {
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({ type: 'daily', summary: '' });
     const [selectedFile, setSelectedFile] = useState(null);
+    const [openThread, setOpenThread] = useState(null);
 
     useEffect(() => {
         fetchReports();
@@ -264,6 +267,22 @@ const InternDashboard = () => {
                                         <div className="report-info">
                                             <Clock size={14} />
                                             An admin is currently reviewing this report
+                                        </div>
+                                    )}
+
+                                    <div className="report-footer">
+                                        <button
+                                            className="thread-toggle"
+                                            onClick={() => setOpenThread(openThread === report._id ? null : report._id)}
+                                        >
+                                            <MessageSquare size={14} />
+                                            {openThread === report._id ? 'Hide discussion' : 'Discussion'}
+                                        </button>
+                                    </div>
+
+                                    {openThread === report._id && (
+                                        <div className="report-thread">
+                                            <CommentThread reportId={report._id} />
                                         </div>
                                     )}
                                 </div>

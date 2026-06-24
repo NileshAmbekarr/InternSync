@@ -11,13 +11,15 @@ const Profile = () => {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: user?.name || '',
-        department: user?.department || ''
+        department: user?.department || '',
+        emailNotifications: user?.emailNotifications ?? true
     });
 
     const handleChange = (e) => {
+        const { name, type, value, checked } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [name]: type === 'checkbox' ? checked : value
         });
     };
 
@@ -103,6 +105,20 @@ const Profile = () => {
                                         />
                                     </div>
 
+                                    <label className="toggle-row">
+                                        <span>
+                                            <span className="toggle-title">Email notifications</span>
+                                            <span className="toggle-desc">Receive emails for report updates and comments.</span>
+                                        </span>
+                                        <input
+                                            type="checkbox"
+                                            name="emailNotifications"
+                                            className="toggle-switch"
+                                            checked={formData.emailNotifications}
+                                            onChange={handleChange}
+                                        />
+                                    </label>
+
                                     <div className="form-actions">
                                         <button
                                             type="button"
@@ -137,6 +153,10 @@ const Profile = () => {
                                     <div className="detail-row">
                                         <span className="detail-label">Role</span>
                                         <span className="detail-value">{user?.role}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Email Notifications</span>
+                                        <span className="detail-value">{user?.emailNotifications === false ? 'Off' : 'On'}</span>
                                     </div>
                                     <div className="detail-row">
                                         <span className="detail-label">Email Verified</span>
