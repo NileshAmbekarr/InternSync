@@ -17,27 +17,26 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const checkAuth = async () => {
+            const token = localStorage.getItem('token');
+
+            if (token) {
+                try {
+                    const response = await authAPI.getMe();
+                    setUser(response.data.user);
+                    setOrganization(response.data.organization);
+                } catch {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('organization');
+                    setUser(null);
+                    setOrganization(null);
+                }
+            }
+            setLoading(false);
+        };
         checkAuth();
     }, []);
-
-    const checkAuth = async () => {
-        const token = localStorage.getItem('token');
-
-        if (token) {
-            try {
-                const response = await authAPI.getMe();
-                setUser(response.data.user);
-                setOrganization(response.data.organization);
-            } catch (error) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                localStorage.removeItem('organization');
-                setUser(null);
-                setOrganization(null);
-            }
-        }
-        setLoading(false);
-    };
 
     const login = async (email, password) => {
         const response = await authAPI.login({ email, password });

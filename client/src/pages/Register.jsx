@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
 import toast from 'react-hot-toast';
@@ -78,7 +79,6 @@ const Register = () => {
             });
             toast.success(`Welcome to InternSync! Your organization "${result.organization.name}" is ready.`, {
                 duration: 5000,
-                icon: '🎉'
             });
             navigate('/onboarding');
         } catch (error) {
@@ -109,7 +109,7 @@ const Register = () => {
             <div className="auth-container">
                 <div className="auth-header">
                     <div className="auth-logo">
-                        <span className="logo-icon">⚡</span>
+                        <span className="logo-icon"><Layers size={22} /></span>
                         <h1 className="logo-text">InternSync</h1>
                     </div>
                     <p className="auth-subtitle">Create your organization and get started.</p>

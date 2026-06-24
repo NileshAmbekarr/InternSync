@@ -19,10 +19,12 @@
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
     width: 100%;
-    max-width: 480px;
+    max-width: 460px;
     max-height: 90vh;
     overflow-y: auto;
+    animation: fadeIn 0.2s ease;
 }
 
 .modal-header {
@@ -34,21 +36,25 @@
 }
 
 .modal-header h2 {
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
     margin: 0;
 }
 
 .modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 1.25rem;
     cursor: pointer;
-    padding: var(--spacing-sm);
-    transition: color var(--transition-base);
+    padding: 6px;
+    border-radius: var(--border-radius-sm);
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .modal-close:hover {
+    background: var(--bg-hover);
     color: var(--text-primary);
 }
 
@@ -65,8 +71,3 @@
     border-top: 1px solid var(--border-color);
 }
 
-.form-hint {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-top: var(--spacing-xs);
-}

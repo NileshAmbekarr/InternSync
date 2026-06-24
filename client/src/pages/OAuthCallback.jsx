@@ -18,7 +18,7 @@ const OAuthCallback = () => {
                     toast.success(`Welcome, ${user.name}!`);
                     navigate(user.role === 'admin' ? '/admin' : '/dashboard');
                 })
-                .catch((error) => {
+                .catch(() => {
                     toast.error('Authentication failed. Please try again.');
                     navigate('/login');
                 });

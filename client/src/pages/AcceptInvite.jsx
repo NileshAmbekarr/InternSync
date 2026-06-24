@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Layers, XCircle } from 'lucide-react';
 import { authAPI } from '../utils/api';
 import PasswordInput from '../components/PasswordInput';
 import toast from 'react-hot-toast';
@@ -68,9 +69,7 @@ const AcceptInvite = () => {
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
 
-            toast.success('Welcome to the team! 🎉', {
-                duration: 5000
-            });
+            toast.success('Welcome to the team!', { duration: 5000 });
 
             // Redirect based on role
             const role = response.data.user.role;
@@ -87,20 +86,18 @@ const AcceptInvite = () => {
     if (status === 'error') {
         return (
             <div className="auth-page">
-                <div className="auth-container" style={{ textAlign: 'center' }}>
+                <div className="auth-container auth-centered">
                     <div className="auth-logo">
-                        <span className="logo-icon">⚡</span>
+                        <span className="logo-icon"><Layers size={22} /></span>
                         <h1 className="logo-text">InternSync</h1>
                     </div>
-                    <div style={{ padding: 'var(--spacing-xl) 0' }}>
-                        <div className="status-icon error">❌</div>
+                    <div className="auth-status">
+                        <div className="status-icon error"><XCircle size={32} /></div>
                         <h2>Invalid Invitation</h2>
                         <p className="status-message">
                             This invitation link is invalid or has expired. Please ask your administrator to send a new invitation.
                         </p>
-                        <Link to="/login" className="btn btn-primary" style={{ marginTop: 'var(--spacing-lg)' }}>
-                            Go to Login
-                        </Link>
+                        <Link to="/login" className="btn btn-primary">Go to Login</Link>
                     </div>
                 </div>
             </div>
@@ -112,7 +109,7 @@ const AcceptInvite = () => {
             <div className="auth-container">
                 <div className="auth-header">
                     <div className="auth-logo">
-                        <span className="logo-icon">⚡</span>
+                        <span className="logo-icon"><Layers size={22} /></span>
                         <h1 className="logo-text">InternSync</h1>
                     </div>
                     <p className="auth-subtitle">Complete your account setup to join your team.</p>

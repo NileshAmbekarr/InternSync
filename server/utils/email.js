@@ -24,7 +24,7 @@ const sendVerificationEmail = async (email, name, verificationToken) => {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #09090b; color: #fafafa;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #8b5cf6; font-size: 28px; margin: 0;">⚡ InternSync</h1>
+          <h1 style="color: #8b5cf6; font-size: 28px; margin: 0;">InternSync</h1>
         </div>
         
         <div style="background: #18181b; padding: 30px; border-radius: 12px; border: 1px solid #27272a;">
@@ -73,7 +73,7 @@ const sendInviteEmail = async (email, name, orgName, inviterName, inviteToken, r
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #09090b; color: #fafafa;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #8b5cf6; font-size: 28px; margin: 0;">⚡ InternSync</h1>
+          <h1 style="color: #8b5cf6; font-size: 28px; margin: 0;">InternSync</h1>
         </div>
         
         <div style="background: #18181b; padding: 30px; border-radius: 12px; border: 1px solid #27272a;">

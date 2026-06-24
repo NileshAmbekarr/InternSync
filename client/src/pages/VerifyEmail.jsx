@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Layers, CheckCircle2, XCircle } from 'lucide-react';
 import { authAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 import './Auth.css';
@@ -14,53 +15,46 @@ const VerifyEmail = () => {
             try {
                 await authAPI.verifyEmail(token);
                 setStatus('success');
-                toast.success('Email verified successfully!');
+                toast.success('Email verified successfully');
                 setTimeout(() => navigate('/dashboard'), 3000);
             } catch (error) {
                 setStatus('error');
                 toast.error(error.response?.data?.message || 'Verification failed');
             }
         };
-
-        if (token) {
-            verifyEmail();
-        }
+        if (token) verifyEmail();
     }, [token, navigate]);
 
     return (
         <div className="auth-page">
-            <div className="auth-container" style={{ textAlign: 'center' }}>
+            <div className="auth-container auth-centered">
                 <div className="auth-logo">
-                    <span className="logo-icon">⚡</span>
+                    <span className="logo-icon"><Layers size={22} /></span>
                     <h1 className="logo-text">InternSync</h1>
                 </div>
 
                 {status === 'verifying' && (
                     <div className="loading-container" style={{ minHeight: 150 }}>
-                        <div className="spinner"></div>
+                        <div className="spinner" />
                         <p>Verifying your email...</p>
                     </div>
                 )}
 
                 {status === 'success' && (
-                    <div style={{ padding: 'var(--spacing-xl) 0' }}>
-                        <div style={{ fontSize: '4rem', marginBottom: 'var(--spacing-md)' }}>✅</div>
-                        <h2>Email Verified!</h2>
-                        <p>Your email has been verified successfully. Redirecting to dashboard...</p>
-                        <Link to="/dashboard" className="btn btn-primary" style={{ marginTop: 'var(--spacing-lg)' }}>
-                            Go to Dashboard
-                        </Link>
+                    <div className="auth-status">
+                        <div className="status-icon success"><CheckCircle2 size={32} /></div>
+                        <h2>Email Verified</h2>
+                        <p className="status-message">Your email has been verified. Redirecting to your dashboard...</p>
+                        <Link to="/dashboard" className="btn btn-primary">Go to Dashboard</Link>
                     </div>
                 )}
 
                 {status === 'error' && (
-                    <div style={{ padding: 'var(--spacing-xl) 0' }}>
-                        <div style={{ fontSize: '4rem', marginBottom: 'var(--spacing-md)' }}>❌</div>
+                    <div className="auth-status">
+                        <div className="status-icon error"><XCircle size={32} /></div>
                         <h2>Verification Failed</h2>
-                        <p>The verification link is invalid or has expired.</p>
-                        <Link to="/login" className="btn btn-primary" style={{ marginTop: 'var(--spacing-lg)' }}>
-                            Go to Login
-                        </Link>
+                        <p className="status-message">The verification link is invalid or has expired.</p>
+                        <Link to="/login" className="btn btn-primary">Go to Login</Link>
                     </div>
                 )}
             </div>
