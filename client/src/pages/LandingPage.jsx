@@ -3,19 +3,13 @@ import { Link } from 'react-router-dom';
 import { motion as Motion, useScroll, useTransform } from 'framer-motion';
 import {
     Layers,
-    UploadCloud,
-    Undo2,
-    Star,
     TrendingUp,
-    BarChart3,
-    Bell,
-    MessageSquare,
-    ShieldCheck,
     Users,
     Play,
     ArrowRight,
     Check,
 } from 'lucide-react';
+import FeaturesShowcase from '../components/FeaturesShowcase';
 import './LandingPage.css';
 
 /* ---- animation helpers ---- */
@@ -45,15 +39,6 @@ const Reveal = ({ children, className, delay = 0 }) => (
 );
 
 /* ---- data ---- */
-const features = [
-    { icon: UploadCloud, title: 'Effortless submissions', text: 'Interns post daily logs or weekly reports with attachments in seconds.' },
-    { icon: MessageSquare, title: 'Threaded feedback', text: 'Discuss any report inline — a real conversation between intern and reviewer.' },
-    { icon: Star, title: 'Ratings & grading', text: 'Score submissions with stars, marks, and written feedback in one place.' },
-    { icon: BarChart3, title: 'Live analytics', text: 'Track submission trends, status breakdowns, and your top performers.' },
-    { icon: Bell, title: 'Smart notifications', text: 'In-app and email alerts keep everyone in sync — with a daily digest option.' },
-    { icon: ShieldCheck, title: 'Roles & isolation', text: 'Owner, admin, and intern roles with strict per-organization data isolation.' },
-];
-
 const steps = [
     { n: '01', title: 'Create your org', text: 'Sign up in seconds and invite your team by email.' },
     { n: '02', title: 'Interns submit', text: 'Daily and weekly reports flow in, with files attached.' },
@@ -194,31 +179,8 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* features */}
-            <section className="section features" id="features">
-                <div className="container">
-                    <Reveal className="section-head">
-                        <h2 className="section-title display">Everything you need to run great internships</h2>
-                        <p className="section-lead">From the first submission to the final grade — covered.</p>
-                    </Reveal>
-
-                    <Motion.div
-                        className="feature-grid"
-                        variants={stagger}
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={{ once: true, amount: 0.2 }}
-                    >
-                        {features.map(({ icon: Icon, title, text }) => (
-                            <Motion.div className="feature-card" key={title} variants={fadeUp}>
-                                <span className="feature-icon"><Icon size={22} /></span>
-                                <h3>{title}</h3>
-                                <p>{text}</p>
-                            </Motion.div>
-                        ))}
-                    </Motion.div>
-                </div>
-            </section>
+            {/* features — scroll-pinned showcase */}
+            <FeaturesShowcase />
 
             {/* how it works */}
             <section className="section how" id="how">

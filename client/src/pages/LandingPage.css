@@ -298,49 +298,6 @@
     font-size: var(--text-sm);
 }
 
-/* ---- features ---- */
-.feature-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--spacing-md);
-}
-
-.feature-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-xl);
-    transition: border-color var(--transition-base), transform var(--transition-base);
-}
-
-.feature-card:hover {
-    border-color: var(--border-color-hover);
-    transform: translateY(-4px);
-}
-
-.feature-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 46px;
-    height: 46px;
-    border-radius: var(--border-radius);
-    background: var(--color-primary-subtle);
-    color: var(--color-primary-hover);
-    margin-bottom: var(--spacing-md);
-}
-
-.feature-card h3 {
-    font-size: var(--text-md);
-    margin-bottom: var(--spacing-xs);
-}
-
-.feature-card p {
-    color: var(--text-muted);
-    margin: 0;
-    line-height: 1.6;
-}
-
 /* ---- how it works ---- */
 .step-grid {
     display: grid;
