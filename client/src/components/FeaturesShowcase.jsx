@@ -29,12 +29,20 @@ const total = features.length;
 
 const ShowcaseCard = ({ feature, index, progress, zIndex }) => {
     const Icon = feature.icon;
-    const c = index / (total - 1);
-    const half = 0.5 / (total - 1);
+    const isFirst = index === 0;
+    const isLast = index === total - 1;
 
-    const opacity = useTransform(progress, [c - half, c, c + half], [0, 1, 0]);
-    const y = useTransform(progress, [c - half, c, c + half], [70, 0, -70]);
-    const scale = useTransform(progress, [c - half, c, c + half], [0.9, 1, 0.9]);
+    // Scroll window for this card, clamped to [0, 1] (Framer's scroll
+    // timeline requires offsets in range and monotonically increasing).
+    const center = (index + 0.5) / total;
+    const start = Math.max(0, center - 1 / total);
+    const end = Math.min(1, center + 1 / total);
+    const range = [start, center, end];
+
+    // The first/last card stays anchored at the start/end of the section.
+    const opacity = useTransform(progress, range, isFirst ? [1, 1, 0] : isLast ? [0, 1, 1] : [0, 1, 0]);
+    const y = useTransform(progress, range, isFirst ? [0, 0, -70] : isLast ? [70, 0, 0] : [70, 0, -70]);
+    const scale = useTransform(progress, range, isFirst ? [1, 1, 0.9] : isLast ? [0.9, 1, 1] : [0.9, 1, 0.9]);
 
     return (
         <Motion.article className="fs-card" style={{ opacity, y, scale, zIndex }}>
