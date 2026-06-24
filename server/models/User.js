@@ -58,6 +58,11 @@ const userSchema = new mongoose.Schema({
     invitedAt: Date,
     inviteToken: String,
     inviteTokenExpires: Date,
+    // Preferences
+    emailNotifications: {
+        type: Boolean,
+        default: true
+    },
     // Status
     isActive: {
         type: Boolean,

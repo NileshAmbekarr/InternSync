@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['report_submitted', 'report_reviewed', 'report_graded', 'invite_accepted'],
+        enum: ['report_submitted', 'report_reviewed', 'report_graded', 'invite_accepted', 'report_comment'],
         required: true
     },
     title: {
@@ -29,6 +29,11 @@ const notificationSchema = new mongoose.Schema({
         default: ''
     },
     read: {
+        type: Boolean,
+        default: false
+    },
+    // Whether this notification has been included in a digest email
+    digested: {
         type: Boolean,
         default: false
     }

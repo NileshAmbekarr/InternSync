@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, CalendarDays, FileText, Download, Info } from 'luc
 import { reportsAPI } from '../utils/api';
 import StatusBadge from '../components/StatusBadge';
 import StarRating from '../components/StarRating';
+import CommentThread from '../components/CommentThread';
 import toast from 'react-hot-toast';
 import './ReviewReport.css';
 
@@ -196,6 +197,10 @@ const ReviewReport = () => {
                                     </div>
                                 </div>
                             )}
+                        </div>
+
+                        <div className="card mt-md">
+                            <CommentThread reportId={id} />
                         </div>
                     </div>
 
