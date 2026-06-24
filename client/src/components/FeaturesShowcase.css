@@ -1,0 +1,197 @@
+/* ===== Scroll-pinned feature showcase ===== */
+
+.fs-section {
+    position: relative;
+    scroll-margin-top: 80px;
+}
+
+.fs-sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.fs-inner {
+    display: grid;
+    grid-template-columns: 0.82fr 1fr;
+    gap: var(--spacing-2xl);
+    align-items: center;
+    width: 100%;
+}
+
+/* pinned heading */
+.fs-head {
+    max-width: 460px;
+}
+
+.fs-counter {
+    display: block;
+    font-size: 3.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.fs-counter-total {
+    color: var(--text-faint);
+    font-size: 1.75rem;
+}
+
+.fs-head .section-title {
+    font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+    text-align: left;
+    margin-bottom: var(--spacing-sm);
+}
+
+.fs-head .section-lead {
+    text-align: left;
+    font-size: var(--text-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.fs-legend {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fs-legend li {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 0.35rem 0;
+    color: var(--text-muted);
+    font-size: var(--text-base);
+    font-weight: var(--fw-medium);
+    transition: color var(--transition-base);
+}
+
+.fs-legend-bar {
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--border-color-hover);
+    transition: width var(--transition-base), background var(--transition-base);
+}
+
+.fs-legend li.active {
+    color: var(--text-primary);
+}
+
+.fs-legend li.active .fs-legend-bar {
+    width: 36px;
+    background: var(--color-primary);
+}
+
+/* card stage */
+.fs-stage {
+    position: relative;
+    height: clamp(380px, 56vh, 480px);
+}
+
+.fs-card {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(var(--spacing-xl), 4vw, 3.5rem);
+    border-radius: var(--border-radius-xl);
+    border: 1px solid var(--border-color);
+    background:
+        radial-gradient(140% 120% at 100% 0%, rgba(139, 92, 246, 0.14), transparent 55%),
+        var(--bg-card);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    will-change: transform, opacity;
+}
+
+.fs-card-index {
+    position: absolute;
+    top: clamp(var(--spacing-md), 2vw, var(--spacing-xl));
+    right: clamp(var(--spacing-lg), 3vw, var(--spacing-2xl));
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(4rem, 9vw, 8rem);
+    font-weight: 700;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+    user-select: none;
+}
+
+.fs-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: var(--border-radius-lg);
+    background: var(--color-primary-subtle);
+    color: var(--color-primary-hover);
+    margin-bottom: var(--spacing-lg);
+}
+
+.fs-card h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.6rem, 3vw, 2.25rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: var(--spacing-md);
+}
+
+.fs-card p {
+    font-size: clamp(1rem, 1.4vw, 1.2rem);
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 46ch;
+}
+
+/* reduced-motion fallback */
+.fs-fallback-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+.fs-card.static {
+    position: static;
+    box-shadow: none;
+    min-height: 280px;
+}
+
+/* responsive */
+@media (max-width: 900px) {
+    .fs-inner {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-xl);
+        align-content: center;
+    }
+
+    .fs-head {
+        max-width: none;
+    }
+
+    .fs-legend {
+        display: none;
+    }
+
+    .fs-counter {
+        font-size: 2.5rem;
+    }
+
+    .fs-stage {
+        height: clamp(340px, 50vh, 420px);
+    }
+
+    .fs-fallback-grid {
+        grid-template-columns: 1fr;
+    }
+}
