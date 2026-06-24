@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usersAPI } from '../utils/api';
-import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
 import './Profile.css';
 
@@ -53,8 +53,6 @@ const Profile = () => {
     };
 
     return (
-        <>
-            <Navbar />
             <div className="page">
                 <div className="container container-sm">
                     <div className="page-header">
@@ -144,7 +142,7 @@ const Profile = () => {
                                         <span className="detail-label">Email Verified</span>
                                         <span className="detail-value">
                                             {user?.isEmailVerified ? (
-                                                <span className="verified">✓ Verified</span>
+                                                <span className="verified"><Check size={14} /> Verified</span>
                                             ) : (
                                                 <span className="not-verified">Not verified</span>
                                             )}
@@ -171,7 +169,6 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
-        </>
     );
 };
 

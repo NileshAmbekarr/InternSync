@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { authAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 import './InviteModal.css';
@@ -47,7 +48,9 @@ const InviteModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Invite Team Member</h2>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+                    <button className="modal-close" onClick={onClose} aria-label="Close">
+                        <X size={18} />
+                    </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="modal-form">

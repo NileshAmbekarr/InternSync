@@ -7,6 +7,7 @@ const Organization = require('../models/Organization');
 const { protect } = require('../middleware/auth');
 const { attachOrganization, checkInternLimit, checkAdminLimit } = require('../middleware/organization');
 const { sendVerificationEmail, sendInviteEmail } = require('../utils/email');
+const { createNotifications } = require('../utils/notify');
 
 const router = express.Router();
 
@@ -258,6 +259,18 @@ router.post('/accept-invite/:token', async (req, res) => {
             org.usage.currentAdmins += 1;
         }
         await org.save();
+
+        // Notify the inviter that their invitation was accepted
+        if (user.invitedBy) {
+            await createNotifications({
+                organizationId: user.organizationId,
+                recipient: user.invitedBy,
+                type: 'invite_accepted',
+                title: 'Invitation accepted',
+                message: `${user.name} accepted your invitation and joined as ${user.role}.`,
+                link: '/admin'
+            });
+        }
 
         // Generate token
         const token = generateToken(user._id);

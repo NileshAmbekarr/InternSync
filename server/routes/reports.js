@@ -6,6 +6,7 @@ const { protect, authorize } = require('../middleware/auth');
 const { attachOrganization, checkStorageLimit } = require('../middleware/organization');
 const upload = require('../middleware/upload');
 const fileService = require('../utils/fileService');
+const { createNotifications, notifyOrgAdmins } = require('../utils/notify');
 
 const router = express.Router();
 
@@ -66,6 +67,17 @@ router.post('/', authorize('intern'), upload.single('file'), async (req, res) =>
         }
 
         const report = await Report.create(reportData);
+
+        // Notify admins/owners when a report is submitted (not for drafts)
+        if (report.status === 'submitted') {
+            await notifyOrgAdmins(req.organizationId, {
+                excludeUserId: req.user._id,
+                type: 'report_submitted',
+                title: 'New report submitted',
+                message: `${req.user.name} submitted a ${report.type} report.`,
+                link: `/admin/review/${report._id}`
+            });
+        }
 
         res.status(201).json({
             success: true,
@@ -277,6 +289,14 @@ router.put('/:id/submit', authorize('intern'), async (req, res) => {
         report.submittedAt = new Date();
         await report.save();
 
+        await notifyOrgAdmins(req.organizationId, {
+            excludeUserId: req.user._id,
+            type: 'report_submitted',
+            title: 'New report submitted',
+            message: `${req.user.name} submitted a ${report.type} report.`,
+            link: `/admin/review/${report._id}`
+        });
+
         res.json({
             success: true,
             message: 'Report submitted successfully',
@@ -481,6 +501,133 @@ router.get('/stats', authorize('admin', 'owner'), async (req, res) => {
     }
 });
 
+// @route   GET /api/reports/analytics
+// @desc    Aggregated analytics for the admin dashboard
+// @access  Private (Admin/Owner)
+router.get('/analytics', authorize('admin', 'owner'), async (req, res) => {
+    try {
+        const orgId = req.organizationId;
+        const since = new Date();
+        since.setDate(since.getDate() - 29);
+        since.setHours(0, 0, 0, 0);
+
+        const [statusAgg, typeAgg, gradeAgg, trendAgg, topInternsAgg] = await Promise.all([
+            // Status distribution (exclude drafts)
+            Report.aggregate([
+                { $match: { organizationId: orgId, status: { $ne: 'draft' } } },
+                { $group: { _id: '$status', count: { $sum: 1 } } }
+            ]),
+            // Reports by type
+            Report.aggregate([
+                { $match: { organizationId: orgId, status: { $ne: 'draft' } } },
+                { $group: { _id: '$type', count: { $sum: 1 } } }
+            ]),
+            // Average rating / marks across graded reports
+            Report.aggregate([
+                { $match: { organizationId: orgId, status: 'graded' } },
+                {
+                    $group: {
+                        _id: null,
+                        avgRating: { $avg: '$rating' },
+                        avgMarks: { $avg: '$marks' },
+                        count: { $sum: 1 }
+                    }
+                }
+            ]),
+            // Submissions per day for the last 30 days
+            Report.aggregate([
+                {
+                    $match: {
+                        organizationId: orgId,
+                        submittedAt: { $gte: since }
+                    }
+                },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$submittedAt' } },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]),
+            // Top interns by graded count and average marks
+            Report.aggregate([
+                { $match: { organizationId: orgId, status: { $ne: 'draft' } } },
+                {
+                    $group: {
+                        _id: '$intern',
+                        reports: { $sum: 1 },
+                        graded: { $sum: { $cond: [{ $eq: ['$status', 'graded'] }, 1, 0] } },
+                        avgMarks: { $avg: '$marks' }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'intern'
+                    }
+                },
+                { $unwind: '$intern' },
+                {
+                    $project: {
+                        _id: 0,
+                        name: '$intern.name',
+                        reports: 1,
+                        graded: 1,
+                        avgMarks: { $round: [{ $ifNull: ['$avgMarks', 0] }, 1] }
+                    }
+                },
+                { $sort: { avgMarks: -1, reports: -1 } },
+                { $limit: 5 }
+            ])
+        ]);
+
+        // Normalize status distribution
+        const statusDistribution = { submitted: 0, under_review: 0, graded: 0 };
+        let totalReports = 0;
+        statusAgg.forEach((s) => {
+            statusDistribution[s._id] = s.count;
+            totalReports += s.count;
+        });
+
+        // Normalize reports by type
+        const reportsByType = { daily: 0, weekly: 0 };
+        typeAgg.forEach((t) => {
+            reportsByType[t._id] = t.count;
+        });
+
+        // Build a continuous 30-day trend (fill gaps with 0)
+        const trendMap = Object.fromEntries(trendAgg.map((d) => [d._id, d.count]));
+        const trend = [];
+        for (let i = 0; i < 30; i++) {
+            const d = new Date(since);
+            d.setDate(since.getDate() + i);
+            const key = d.toISOString().slice(0, 10);
+            trend.push({ date: key, count: trendMap[key] || 0 });
+        }
+
+        const grade = gradeAgg[0] || {};
+
+        res.json({
+            success: true,
+            analytics: {
+                totalReports,
+                statusDistribution,
+                reportsByType,
+                avgRating: grade.avgRating ? Number(grade.avgRating.toFixed(1)) : 0,
+                avgMarks: grade.avgMarks ? Number(grade.avgMarks.toFixed(1)) : 0,
+                gradedCount: grade.count || 0,
+                trend,
+                topInterns: topInternsAgg
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // @route   GET /api/reports/:id
 // @desc    Get single report by ID
 // @access  Private (Admin/Owner or Owner of report)
@@ -551,6 +698,15 @@ router.put('/:id/review', authorize('admin', 'owner'), async (req, res) => {
         report.reviewedBy = req.user._id;
         await report.save();
 
+        await createNotifications({
+            organizationId: req.organizationId,
+            recipient: report.intern,
+            type: 'report_reviewed',
+            title: 'Your report is under review',
+            message: `${req.user.name} started reviewing your ${report.type} report.`,
+            link: '/my-reports'
+        });
+
         res.json({
             success: true,
             message: 'Review started',
@@ -598,6 +754,15 @@ router.put('/:id/grade', authorize('admin', 'owner'), async (req, res) => {
         report.reviewedAt = new Date();
 
         await report.save();
+
+        await createNotifications({
+            organizationId: req.organizationId,
+            recipient: report.intern,
+            type: 'report_graded',
+            title: 'Your report was graded',
+            message: `${req.user.name} graded your ${report.type} report${report.marks != null ? ` — ${report.marks}/100` : ''}.`,
+            link: '/my-reports'
+        });
 
         res.json({
             success: true,

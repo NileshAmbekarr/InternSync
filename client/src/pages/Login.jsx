@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
 import toast from 'react-hot-toast';
@@ -36,12 +37,9 @@ const Login = () => {
             if (message.includes('deactivated')) {
                 toast.error('Your account has been deactivated. Please contact your administrator.', {
                     duration: 6000,
-                    icon: '🚫'
                 });
             } else if (message.includes('Invalid credentials')) {
-                toast.error('Invalid email or password. Please try again.', {
-                    icon: '❌'
-                });
+                toast.error('Invalid email or password. Please try again.');
             } else {
                 toast.error(message);
             }
@@ -62,7 +60,7 @@ const Login = () => {
             <div className="auth-container">
                 <div className="auth-header">
                     <div className="auth-logo">
-                        <span className="logo-icon">⚡</span>
+                        <span className="logo-icon"><Layers size={22} /></span>
                         <h1 className="logo-text">InternSync</h1>
                     </div>
                     <p className="auth-subtitle">Welcome back! Sign in to continue.</p>

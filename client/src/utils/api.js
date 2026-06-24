@@ -65,7 +65,9 @@ export const reportsAPI = {
     // Admin endpoints
     getAll: (params) => api.get('/reports', { params }),
     getStats: () => api.get('/reports/stats'),
+    getAnalytics: () => api.get('/reports/analytics'),
     getOne: (id) => api.get(`/reports/${id}`),
+    review: (id) => api.put(`/reports/${id}/review`),
     grade: (id, data) => api.put(`/reports/${id}/grade`, data),
 
     // File download (R2 or local)
@@ -80,6 +82,13 @@ export const usersAPI = {
     updateProfile: (data) => api.put('/users/profile', data),
     deactivate: (id) => api.put(`/users/${id}/deactivate`),
     reactivate: (id) => api.put(`/users/${id}/reactivate`),
+};
+
+// Notifications API
+export const notificationsAPI = {
+    getAll: (params) => api.get('/notifications', { params }),
+    markRead: (id) => api.put(`/notifications/${id}/read`),
+    markAllRead: () => api.put('/notifications/read-all'),
 };
 
 export default api;
